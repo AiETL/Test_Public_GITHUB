@@ -101,6 +101,77 @@ recovered = decrypt(decode_message("output.png"), "password")
 print(recovered)                             # b"secret"
 ```
 
+## Audio (WAV) steganography
+
+The same LSB technique works on **WAV** PCM audio. A WAV file is a stream of
+integer samples; overwriting the **least-significant bit** of a sample
+shifts its amplitude by at most one step, an inaudible change. The audio
+engine lives in the `stego.audio` submodule and mirrors the image API, using
+only the Python standard library `wave` module (no extra dependencies).
+
+Each payload bit is stored in the LSB of the least-significant byte of each
+successive PCM sample (WAV sample data is little-endian). The payload layout
+is identical to the image engine:
+
+```
+[ 32-bit big-endian length header ][ message bytes ]
+```
+
+The capacity of a WAV file is `nframes × nchannels` bits — one bit per
+sample. Both 8-bit and 16-bit PCM (sample widths 1 and 2) are supported; any
+other sample width raises a `ValueError`, as does a payload that does not
+fit. The output WAV preserves the original channels, sample width and frame
+rate.
+
+### Why WAV only
+
+LSB hiding requires a **lossless** container so the exact sample values —
+and therefore the hidden bits — survive being saved and reopened. **WAV** is
+lossless and is the recommended carrier (it is ideal for voice recordings).
+**MP3 is lossy**: re-encoding quantises and reshapes the samples and would
+destroy the hidden bits. **MIDI** stores event and structural data (notes,
+timing, instruments) rather than audio samples, so there are no sample LSBs
+to hide in. Both MP3 and MIDI are therefore out of scope for this
+sample-LSB approach.
+
+### Command line
+
+```bash
+python -m stego.cli encode-audio input.wav "meet me at noon" output.wav
+python -m stego.cli decode-audio output.wav
+# -> meet me at noon
+```
+
+With a password, the message is encrypted before it is hidden and decrypted
+after it is extracted:
+
+```bash
+python -m stego.cli encode-audio input.wav "meet me at noon" output.wav --password hunter2
+python -m stego.cli decode-audio output.wav --password hunter2
+# -> meet me at noon
+```
+
+### Python API
+
+```python
+from stego import audio
+from stego.crypto import encrypt, decrypt
+
+# Plain text round-trip
+audio.encode_text("input.wav", "hello", "output.wav")
+print(audio.decode_text("output.wav"))            # "hello"
+
+# Raw bytes
+audio.encode_message("input.wav", b"\x00\x01\x02", "output.wav")
+print(audio.decode_message("output.wav"))          # b"\x00\x01\x02"
+
+# Encrypt, then hide
+token = encrypt(b"secret", "password")
+audio.encode_message("input.wav", token, "output.wav")
+recovered = decrypt(audio.decode_message("output.wav"), "password")
+print(recovered)                                   # b"secret"
+```
+
 ## How the encryption works
 
 When a password is supplied, a 32-byte key is derived from it with
