@@ -1,15 +1,18 @@
-# stego — LSB Image Steganography
+# stego — LSB Image & Audio Steganography
 
-A small, dependency-light toolkit for hiding messages inside images and
-recovering them again, with an optional password-based encryption layer.
+A small, dependency-light toolkit for hiding messages inside images and WAV
+audio and recovering them again, with an optional password-based encryption
+layer.
 
 ## What is steganography?
 
 Where cryptography makes a message *unreadable*, steganography makes a
 message *unnoticeable* — it hides the very existence of the message by
-tucking it inside something ordinary, like a photo. An observer sees only a
-normal-looking picture and has no obvious reason to suspect it carries a
-hidden payload. Combining the two (encrypt, then hide) gives you both
+tucking it inside something ordinary, like a photo or an audio clip. An
+observer sees only a normal-looking picture — or hears only an
+ordinary-sounding recording — and has no obvious reason to suspect it
+carries a hidden payload. Combining the two (encrypt, then hide) gives you
+both
 properties: the message is hard to find, and useless even if found.
 
 ## The LSB technique
@@ -50,10 +53,17 @@ pip install -r requirements.txt
 
 This installs [Pillow](https://python-pillow.org/) for image handling and
 [cryptography](https://cryptography.io/) for the optional password layer.
+Pillow is only needed for the image engine; the audio engine needs no extra
+dependencies — it uses the Python standard-library `wave` module (the
+password layer still uses `cryptography`).
 
 ## Usage
 
-### Command line
+There are two engines: the image commands (`encode`/`decode`, shown below)
+and the audio commands (`encode-audio`/`decode-audio`, see the
+[Audio (WAV) steganography](#audio-wav-steganography) section).
+
+### Command line (image)
 
 Hide a message:
 
@@ -80,7 +90,7 @@ python -m stego.cli decode output.png --password hunter2
 Decoding with the wrong password (or no password) fails cleanly rather than
 printing garbage.
 
-### Python API
+### Python API (image)
 
 ```python
 from stego import encode_text, decode_text, encode_message, decode_message
